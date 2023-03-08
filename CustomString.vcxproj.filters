@@ -26,5 +26,8 @@
     <ClInclude Include="CustomString.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="poijppiojiojpiopjiopj.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
