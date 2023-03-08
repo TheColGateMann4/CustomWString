@@ -21,10 +21,11 @@ public:
 	CustomWString& operator=(const WCHAR* text);
 	CustomWString& operator+=(const WCHAR* text);
 
+	CustomWString& operator=(const std::wstring& text);
+	CustomWString& operator+=(const std::wstring& text);
+
 	friend std::wostream& operator<<(std::wostream& os, const CustomWString& customWString);
 	friend std::wistream& operator>>(std::wistream& os, CustomWString& customWString);
-
-
 
 private:
 	VOID m_FreeMemory();
@@ -35,10 +36,6 @@ private:
 	UINT32 m_length;
 	UINT32 m_capacity;
 
-
-	const UINT32 m_additionalCapacity = 15;
-	const UINT32 m_margin = 2;
+	const static UINT32 m_additionalCapacity = 15;
+	const static UINT32 m_margin = 2;
 };
-
-std::wostream& operator<<(std::wostream& os, const CustomWString& customWString);
-std::wistream& operator>>(std::wistream& is, CustomWString& customWString);

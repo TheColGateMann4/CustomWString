@@ -75,25 +75,21 @@ UINT32 CustomWString::capacity() const
 */
 
 
-CustomWString& CustomWString::operator+=(const WCHAR& character) ///////////////////////////////////////////
+CustomWString& CustomWString::operator+=(const WCHAR& character)
 {
-	if (this->m_length != NULL && this->m_capacity != NULL && this->m_dataptr != nullptr)
-	{
-		if (this->m_length + 1 > this->m_capacity)
-		{
-			void* data = std::realloc(this->m_dataptr, (this->m_length + 1 + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+	void* data = nullptr;
 
-			if (data == nullptr)
-				abort();
+	if ((this->m_dataptr != nullptr) && (this->m_length + 1 > this->m_capacity))
+		data = std::realloc(this->m_dataptr, (this->m_length + 1 + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+	if (this->m_dataptr == nullptr)
+		data = std::malloc((1 + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
 
-			this->m_dataptr = data;
-			this->m_capacity = this->m_length + 1 + this->m_additionalCapacity;
-			this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + this->m_length + 1, this->m_additionalCapacity + this->m_margin);
-		}
-	}
-	else
+	if (((this->m_dataptr != nullptr) && (this->m_length + 1 > this->m_capacity)) || (this->m_dataptr == nullptr))
 	{
-		this->m_dataptr = std::malloc((1 + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+		if (data == nullptr)
+			abort();
+
+		this->m_dataptr = data;
 		this->m_capacity = this->m_length + 1 + this->m_additionalCapacity;
 		this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + this->m_length + 1, this->m_additionalCapacity + this->m_margin);
 	}
@@ -109,42 +105,32 @@ CustomWString& CustomWString::operator+=(const WCHAR& character) ///////////////
 
 
 
-CustomWString& CustomWString::operator=(const CustomWString& customString)/////////////////////////////////
+CustomWString& CustomWString::operator=(const CustomWString& customString)
 {
 	if (this == &customString)
 		return *this;
 
-	if (this->m_length != NULL && this->m_capacity != NULL && this->m_dataptr != NULL)
-	{
-		if (customString.length() > this->capacity())
-		{
-			void* data = std::realloc(this->m_dataptr, (customString.length() + this->m_margin + this->m_additionalCapacity) * sizeof(WCHAR));
+	void* data = nullptr;
 
-			if (data == nullptr)
-				abort();
+	if (this->capacity() > customString.length())
+		if (((this->m_capacity - customString.length()) > 15))
+			this->m_FreeMemory();
 
-			this->m_dataptr = data;
-			this->m_capacity = customString.length() + this->m_additionalCapacity;
-			this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + customString.length(), this->m_additionalCapacity + this->m_margin);
-		}
-		else
-		{ 
-			//we don't want to have 5 characters in a string with 500 capacity
-			if ((this->m_capacity - customString.length()) > 15) // substracting UINTs is safe here since textLength is equal or lower than capacity
-			{
-				this->m_FreeMemory();
-				this->m_dataptr = std::malloc((customString.length() + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
-				this->m_capacity = customString.length() + this->m_additionalCapacity;
-				this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + customString.length(), this->m_additionalCapacity + this->m_margin);
-			}
-		}
-	}
-	else
+	if ((this->m_dataptr != nullptr) && (customString.length() > this->capacity()))
+		data = std::realloc(this->m_dataptr, (customString.length() + this->m_margin + this->m_additionalCapacity) * sizeof(WCHAR));
+	else if (((this->m_dataptr != nullptr) && (this->capacity() > customString.length()) && ((this->m_capacity - customString.length()) > 15)) || (this->m_dataptr == nullptr))
+		data = std::malloc((this->m_margin + this->m_additionalCapacity + customString.length()) * sizeof(WCHAR));
+
+	if (((this->m_dataptr != nullptr) && (this->capacity() > customString.length()) && ((this->m_capacity - customString.length()) > 15)) || (this->m_dataptr == nullptr) || ((this->m_dataptr != nullptr) && (customString.length() > this->capacity())))
 	{
-		this->m_dataptr = std::malloc((this->m_margin + this->m_additionalCapacity + customString.length()) * sizeof(WCHAR));
+		if (data == nullptr)
+			abort();
+
+		this->m_dataptr = data;
 		this->m_capacity = customString.length() + this->m_additionalCapacity;
 		this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + customString.length(), this->m_additionalCapacity + this->m_margin);
 	}
+
 
 	wmemmove(static_cast<WCHAR*>(this->m_dataptr), customString.get(), customString.length());
 	this->m_length = customString.length();
@@ -155,38 +141,27 @@ CustomWString& CustomWString::operator=(const CustomWString& customString)//////
 
 
 
-CustomWString& CustomWString::operator=(const WCHAR* text)///////////////////////////
+CustomWString& CustomWString::operator=(const WCHAR* text)
 {
 	UINT32 textLength = (UINT32)wcslen(text);
+	void* data = nullptr;
 
-	if (this->m_length != NULL && this->m_capacity != NULL && this->m_dataptr != nullptr)
+	if (this->m_capacity > textLength)
+		if ((this->m_dataptr != nullptr) && ((this->m_capacity - textLength) > 15))
+			this->m_FreeMemory();
+
+	if ((this->m_dataptr != nullptr) && (textLength > this->m_capacity))
+		data = std::realloc(this->m_dataptr, (textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+	else if ((this->m_dataptr == nullptr) || ((this->m_capacity > textLength) && (this->m_dataptr != nullptr) && ((this->m_capacity - textLength) > 15)))
+		data = std::malloc((textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+
+
+	if (((this->m_dataptr != nullptr) && (textLength > this->m_capacity)) || (this->m_dataptr == nullptr) || (this->m_capacity > textLength) && ((this->m_dataptr != nullptr) && ((this->m_capacity - textLength) > 15)))
 	{
-		if (textLength > this->m_capacity)
-		{
-			void* data = std::realloc(this->m_dataptr, (textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+		if (data == nullptr)
+			abort();
 
-			if (data == nullptr)
-				abort();
-
-			this->m_dataptr = data;
-			this->m_capacity = textLength + this->m_additionalCapacity;
-			this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + textLength, this->m_additionalCapacity + this->m_margin);
-		}
-		else
-		{
-			//we don't want to have 5 characters in a string with 500 capacity
-			if ((this->m_capacity - textLength) > 15) // substracting UINTs is safe here since textLength is equal or lower than capacity
-			{
-				this->m_FreeMemory();
-				this->m_dataptr = std::malloc((textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
-				this->m_capacity = textLength + this->m_additionalCapacity;
-				this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + textLength, this->m_additionalCapacity + this->m_margin);
-			}
-		}
-	}
-	else
-	{
-		this->m_dataptr = std::malloc((textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+		this->m_dataptr = data;
 		this->m_capacity = textLength + this->m_additionalCapacity;
 		this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + textLength, this->m_additionalCapacity + this->m_margin);
 	}
@@ -201,27 +176,23 @@ CustomWString& CustomWString::operator=(const WCHAR* text)//////////////////////
 
 
 
-CustomWString& CustomWString::operator+=(const CustomWString& customString)////////////////////////////////
+CustomWString& CustomWString::operator+=(const CustomWString& customString)
 {
-	if (this->m_length != NULL && this->m_capacity != NULL && this->m_dataptr != nullptr)
-	{
-		if (customString.length() + this->m_length > this->m_capacity)
-		{
-			void* data = std::realloc(this->m_dataptr, (this->m_length + customString.length() + this->m_margin + this->m_additionalCapacity) * sizeof(WCHAR));
+	void* data = nullptr;
 
-			if (data == nullptr)
-				abort();
+	if ((this->m_dataptr != nullptr) && (customString.length() + this->m_length) > this->m_capacity)
+		data = std::realloc(this->m_dataptr, (this->m_length + customString.length() + this->m_margin + this->m_additionalCapacity) * sizeof(WCHAR));
+	else if (this->m_dataptr == nullptr)
+		data = std::malloc((customString.length() + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
 
-			this->m_dataptr = data;
-			this->m_capacity = this->m_length + customString.length() + this->m_additionalCapacity;
-			this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + this->m_length + customString.length(), this->m_additionalCapacity + this->m_margin);
-		}
-	}
-	else
+	if ((this->m_dataptr != nullptr && (customString.length() + this->m_length) > this->m_capacity) || (this->m_dataptr == nullptr))
 	{
-		this->m_dataptr = std::malloc((customString.length() + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+		if (data == nullptr)
+			abort();
+
+		this->m_dataptr = data;
 		this->m_capacity = this->m_length + customString.length() + this->m_additionalCapacity;
-		this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + customString.length(), this->m_additionalCapacity + this->m_margin);
+		this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + this->m_length + customString.length(), this->m_additionalCapacity + this->m_margin);
 	}
 
 	wmemmove(static_cast<WCHAR*>(this->m_dataptr) + this->m_length, customString.get(), customString.length());
@@ -234,29 +205,24 @@ CustomWString& CustomWString::operator+=(const CustomWString& customString)/////
 
 
 
-CustomWString& CustomWString::operator+=(const WCHAR* text)/////////////////////////////////
+CustomWString& CustomWString::operator+=(const WCHAR* text)
 {
 	UINT32 textLength = wcslen(text);
+	void* data = nullptr;
 
-	if (this->m_length != NULL && this->m_capacity != NULL && this->m_dataptr != NULL)
+	if (this->m_dataptr != nullptr && (textLength + this->m_length) > this->m_capacity)
+		data = std::realloc(this->m_dataptr, (this->m_length + textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+	else if (this->m_dataptr == nullptr)
+		data = std::malloc((textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+
+	if ((this->m_dataptr != NULL && (textLength + this->m_length) > this->m_capacity) || this->m_dataptr == NULL)
 	{
-		if (textLength + this->m_length > this->m_capacity)
-		{
-			void* data = std::realloc(this->m_dataptr, (this->m_length + textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+		if (data == nullptr)
+			abort();
 
-			if (data == nullptr)
-				abort;
-
-			this->m_dataptr = data;
-			this->m_capacity = this->m_length + textLength + this->m_additionalCapacity;
-			this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + this->m_length + textLength, this->m_additionalCapacity + this->m_margin);
-		}
-	}
-	else
-	{
-		this->m_dataptr = std::malloc((textLength + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+		this->m_dataptr = data;
 		this->m_capacity = this->m_length + textLength + this->m_additionalCapacity;
-		this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + textLength, this->m_additionalCapacity + this->m_margin);
+		this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + this->m_length + textLength, this->m_additionalCapacity + this->m_margin);
 	}
 
 	wmemmove(static_cast<WCHAR*>(this->m_dataptr) + this->m_length, text, textLength);
@@ -265,6 +231,28 @@ CustomWString& CustomWString::operator+=(const WCHAR* text)/////////////////////
 
 	return *this;
 }
+
+
+
+
+CustomWString& CustomWString::operator+=(const std::wstring& text)
+{
+	*this += text.c_str();
+
+	return *this;
+}
+
+
+
+
+CustomWString& CustomWString::operator=(const std::wstring& text)
+{
+	*this = text.c_str();
+
+	return *this;
+}
+
+
 
 
 /*
@@ -319,7 +307,7 @@ std::wistream& operator>>(std::wistream& is, CustomWString& customWString)
 	for (; 0 < size; size--, character = is.rdbuf()->snextc())
 	{
 		if (character == 5) // end of the file, quit
-			break; 
+			break;
 		else if (character == 10) // end of the line, quit
 			break;
 		else
