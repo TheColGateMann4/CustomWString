@@ -105,6 +105,36 @@ CustomWString& CustomWString::operator+=(const WCHAR& character)
 
 
 
+CustomWString& CustomWString::operator=(const WCHAR& character)
+{
+	void* data = nullptr;
+
+	if (this->m_dataptr != nullptr)
+		if ((this->m_capacity - 1) > 15)
+			this->m_FreeMemory();
+
+	if ((this->m_dataptr == nullptr) || ((this->m_dataptr != nullptr) && ((this->m_capacity - 1) > 15)))
+	{
+		data = std::malloc((1 + this->m_additionalCapacity + this->m_margin) * sizeof(WCHAR));
+
+		if (data == nullptr)
+			abort();
+
+		this->m_dataptr = data;
+		this->m_length = 1;
+		this->m_capacity = this->m_additionalCapacity + this->m_length;
+	}
+
+	this->m_ZeroMemory(static_cast<WCHAR*>(this->m_dataptr) + 1, this->m_additionalCapacity + this->m_margin);
+
+	this->get()[0] = character;
+
+	return *this;
+}
+
+
+
+
 CustomWString& CustomWString::operator=(const CustomWString& customString)
 {
 	if (this == &customString)
@@ -171,6 +201,56 @@ CustomWString& CustomWString::operator=(const WCHAR* text)
 	this->m_length = textLength;
 
 	return *this;
+}
+
+BOOL CustomWString::m_isEqualToWChar(const WCHAR* text)
+{
+	UINT32 textLength = (UINT32)wcslen(text);
+	if (this->length() != textLength)
+		return FALSE;
+
+	WCHAR* localWCHAR = this->get();
+
+	for (UINT32 i = 0;;)
+	{
+		if (localWCHAR[i] != text[i])
+			return FALSE;
+
+		if (i++ == this->length())
+			return TRUE;
+	}
+}
+
+
+
+
+bool CustomWString::operator==(const WCHAR& character)
+{
+	return this->get()[0] == character;
+}
+
+
+
+
+bool CustomWString::operator==(const WCHAR* text)
+{
+	return m_isEqualToWChar(text);
+}
+
+
+
+
+bool CustomWString::operator==(const CustomWString& customString)
+{
+	return m_isEqualToWChar(customString.get());
+}
+
+
+
+
+bool CustomWString::operator==(const std::wstring& text)
+{
+	return m_isEqualToWChar(text.c_str());
 }
 
 
