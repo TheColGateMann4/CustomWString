@@ -4,6 +4,7 @@
 class CustomWString {
 public:
 	CustomWString(const WCHAR* text);
+	CustomWString(const WCHAR character);
 	CustomWString();
 	~CustomWString();
 
